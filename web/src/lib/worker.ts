@@ -25,6 +25,13 @@ async function syncAll() {
           } else if (account.provider === 'gcp') {
             const { syncGCPCosts } = await import('./cloud/gcp');
             await syncGCPCosts(user.id, { project_id: account.project_id!, service_account_key: account.service_account_key });
+          } else if (account.provider === 'custom') {
+            const { fetchCustomCosts } = await import('./cloud/custom');
+            const { insertCosts } = await import('./db');
+            const result = await fetchCustomCosts({ endpoint_url: account.endpoint_url!, api_key: account.api_key, account_id: account.account_id });
+            if (result.success && result.rows) {
+              insertCosts(user.id, result.rows);
+            }
           }
           updateCloudAccountSync(user.id, account.id);
         } catch (err) {

@@ -55,6 +55,43 @@ export const migrations: Migration[] = [
       // SQLite doesn't support DROP COLUMN in older versions; skip
     },
   },
+  {
+    id: 3,
+    name: 'add_custom_cloud_provider',
+    up(db) {
+      const cols = (db.prepare('PRAGMA table_info(cloud_accounts)').all() as { name: string }[]).map(c => c.name);
+      if (!cols.includes('endpoint_url')) {
+        db.exec(`ALTER TABLE cloud_accounts ADD COLUMN endpoint_url TEXT`);
+        db.exec(`ALTER TABLE cloud_accounts ADD COLUMN api_key TEXT`);
+      }
+      // Recreate to update CHECK constraint (add 'custom')
+      db.exec(`
+        CREATE TABLE cloud_accounts_new (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER REFERENCES users(id),
+          provider TEXT NOT NULL CHECK(provider IN ('aws', 'gcp', 'custom')),
+          label TEXT NOT NULL,
+          account_id TEXT NOT NULL,
+          role_arn TEXT,
+          external_id TEXT,
+          project_id TEXT,
+          service_account_key TEXT,
+          endpoint_url TEXT,
+          api_key TEXT,
+          status TEXT NOT NULL DEFAULT 'connected' CHECK(status IN ('connected', 'error', 'disconnected')),
+          last_sync TEXT,
+          created_at TEXT DEFAULT (datetime('now'))
+        );
+        INSERT INTO cloud_accounts_new SELECT * FROM cloud_accounts;
+        DROP TABLE cloud_accounts;
+        ALTER TABLE cloud_accounts_new RENAME TO cloud_accounts;
+        CREATE INDEX IF NOT EXISTS idx_cloud_accounts_user ON cloud_accounts(user_id);
+      `);
+    },
+    down(db) {
+      // skip
+    },
+  },
 ];
 
 export function runMigrations(db: Database.Database) {

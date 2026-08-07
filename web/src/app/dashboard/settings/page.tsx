@@ -6,12 +6,12 @@ import { ErrorBoundary } from '../../components/ErrorBoundary';
 
 interface CloudAccount {
   id: number; provider: string; label: string; account_id: string;
-  role_arn: string | null; project_id: string | null;
+  role_arn: string | null; project_id: string | null; endpoint_url: string | null;
   status: string; last_sync: string | null;
 }
 
 function SettingsContent() {
-  const [tab, setTab] = useState<'upload' | 'aws' | 'gcp'>('upload');
+  const [tab, setTab] = useState<'upload' | 'aws' | 'gcp' | 'custom'>('upload');
   const [accounts, setAccounts] = useState<CloudAccount[]>([]);
   const [webhookUrl, setWebhookUrl] = useState('');
   const [loading, setLoading] = useState(true);
@@ -29,6 +29,12 @@ function SettingsContent() {
   const [gcpLabel, setGcpLabel] = useState('');
   const [gcpProjectId, setGcpProjectId] = useState('');
   const [gcpServiceAccount, setGcpServiceAccount] = useState('');
+
+  // Custom form
+  const [customLabel, setCustomLabel] = useState('');
+  const [customAccountId, setCustomAccountId] = useState('');
+  const [customEndpoint, setCustomEndpoint] = useState('');
+  const [customApiKey, setCustomApiKey] = useState('');
 
   useEffect(() => {
     Promise.all([
@@ -127,6 +133,36 @@ function SettingsContent() {
     setConnecting(false);
   }
 
+  async function handleConnectCustom() {
+    setConnecting(true);
+    setMessage(null);
+    try {
+      const res = await fetch('/api/connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          provider: 'custom',
+          label: customLabel,
+          accountId: customAccountId || 'custom',
+          endpointUrl: customEndpoint,
+          apiKey: customApiKey || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setMessage({ type: 'success', text: 'Custom provider connected.' });
+        setCustomLabel(''); setCustomAccountId(''); setCustomEndpoint(''); setCustomApiKey('');
+        const fresh = await fetch('/api/connect').then(r => r.json());
+        setAccounts(fresh.accounts || []);
+      } else {
+        setMessage({ type: 'error', text: data.error || 'Connection failed.' });
+      }
+    } catch {
+      setMessage({ type: 'error', text: 'Network error.' });
+    }
+    setConnecting(false);
+  }
+
   async function handleDisconnect(id: number) {
     if (!confirm('Disconnect this account?')) return;
     await fetch(`/api/connect?id=${id}`, { method: 'DELETE' });
@@ -171,6 +207,7 @@ function SettingsContent() {
           { key: 'upload' as const, label: 'CSV Upload' },
           { key: 'aws' as const, label: 'Connect AWS' },
           { key: 'gcp' as const, label: 'Connect GCP' },
+          { key: 'custom' as const, label: 'Custom Cloud' },
         ].map(t => (
           <button
             key={t.key}
@@ -303,6 +340,66 @@ function SettingsContent() {
         </div>
       )}
 
+      {/* Custom Cloud Tab */}
+      {tab === 'custom' && (
+        <div className="rounded-xl p-6" style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border)' }}>
+          <h2 className="text-lg font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>Connect Custom Cloud</h2>
+          <p className="text-sm mb-4" style={{ color: 'var(--text-secondary)' }}>
+            Connect any cloud provider via a cost data API. Provide an endpoint URL that returns cost data as JSON.
+          </p>
+          <div className="rounded-lg p-4 mb-4 text-xs font-mono" style={{ backgroundColor: 'var(--bg-elevated)', color: 'var(--text-muted)' }}>
+            <p className="mb-2" style={{ color: 'var(--text-secondary)' }}>Expected response format:</p>
+            <pre>{`[
+  {
+    "date": "2026-01-15",
+    "service": "compute",
+    "region": "us-east-1",
+    "amount": 123.45,
+    "usage_quantity": 100
+  }
+]`}</pre>
+            <p className="mt-2">Or: <code>{`{ "costs": [...] }`}</code></p>
+          </div>
+
+          <div className="space-y-4 mb-6">
+            <div>
+              <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Label</label>
+              <input value={customLabel} onChange={e => setCustomLabel(e.target.value)}
+                placeholder="Production Azure"
+                className="w-full px-4 py-2.5 rounded-lg text-sm outline-none focus:ring-2"
+                style={inputStyle} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Account ID</label>
+              <input value={customAccountId} onChange={e => setCustomAccountId(e.target.value)}
+                placeholder="my-account-id (optional)"
+                className="w-full px-4 py-2.5 rounded-lg text-sm outline-none focus:ring-2"
+                style={inputStyle} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Endpoint URL</label>
+              <input value={customEndpoint} onChange={e => setCustomEndpoint(e.target.value)}
+                placeholder="https://api.example.com/costs"
+                className="w-full px-4 py-2.5 rounded-lg text-sm outline-none focus:ring-2"
+                style={inputStyle} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>API Key (optional)</label>
+              <input value={customApiKey} onChange={e => setCustomApiKey(e.target.value)} type="password"
+                placeholder="Bearer token or API key"
+                className="w-full px-4 py-2.5 rounded-lg text-sm outline-none focus:ring-2"
+                style={inputStyle} />
+            </div>
+          </div>
+
+          <button onClick={handleConnectCustom} disabled={connecting || !customLabel || !customEndpoint}
+            className="px-5 py-2.5 rounded-lg text-sm font-medium transition-opacity duration-150 hover:opacity-90 disabled:opacity-50"
+            style={{ backgroundColor: 'var(--color-primary)', color: 'var(--bg)' }}>
+            {connecting ? 'Connecting...' : 'Connect Custom Provider'}
+          </button>
+        </div>
+      )}
+
       {/* Connected Accounts */}
       {accounts.length > 0 && (
         <div className="mt-8">
@@ -312,7 +409,7 @@ function SettingsContent() {
               <div key={a.id} className="flex items-center justify-between rounded-xl p-4"
                 style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border)' }}>
                 <div className="flex items-center gap-3">
-                  <span className="text-lg">{a.provider === 'aws' ? '☁️' : '🔷'}</span>
+                  <span className="text-lg">{a.provider === 'aws' ? '☁️' : a.provider === 'gcp' ? '🔷' : '🔗'}</span>
                   <div>
                     <p className="font-medium text-sm" style={{ color: 'var(--text-primary)' }}>{a.label}</p>
                     <p className="text-xs" style={{ color: 'var(--text-muted)' }}>

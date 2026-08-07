@@ -19,9 +19,16 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
   if (account.provider === 'aws') {
     const { syncAWSCosts } = await import('@/lib/cloud/aws');
     rowsSynced = await syncAWSCosts(userId, { account_id: account.account_id, role_arn: account.role_arn!, external_id: account.external_id });
-  } else {
+  } else if (account.provider === 'gcp') {
     const { syncGCPCosts } = await import('@/lib/cloud/gcp');
     rowsSynced = await syncGCPCosts(userId, { project_id: account.project_id!, service_account_key: account.service_account_key });
+  } else {
+    const { fetchCustomCosts } = await import('@/lib/cloud/custom');
+    const { insertCosts } = await import('@/lib/db');
+    const result = await fetchCustomCosts({ endpoint_url: account.endpoint_url!, api_key: account.api_key, account_id: account.account_id });
+    if (result.success && result.rows) {
+      rowsSynced = insertCosts(userId, result.rows);
+    }
   }
 
   updateCloudAccountSync(userId, account.id);

@@ -12,8 +12,8 @@ export const GET = withErrorHandling(async () => {
   const safe = accounts.map(a => ({
     id: a.id, provider: a.provider, label: a.label, account_id: a.account_id,
     role_arn: a.role_arn, external_id: a.external_id,
-    project_id: a.project_id, status: a.status,
-    last_sync: a.last_sync, created_at: a.created_at,
+    project_id: a.project_id, endpoint_url: a.endpoint_url,
+    status: a.status, last_sync: a.last_sync, created_at: a.created_at,
   }));
   return NextResponse.json({ accounts: safe });
 });
@@ -27,14 +27,16 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
   const v = validate(ConnectSchema, body);
   if (!v.success) return NextResponse.json({ error: v.error }, { status: 400 });
 
-  const { provider, label, accountId, roleArn, externalId, projectId, serviceAccountKey } = v.data;
+  const { provider, label, accountId, roleArn, externalId, projectId, serviceAccountKey, endpointUrl, apiKey } = v.data;
   if (provider === 'aws' && !roleArn) return NextResponse.json({ error: 'roleArn is required for AWS' }, { status: 400 });
   if (provider === 'gcp' && !projectId) return NextResponse.json({ error: 'projectId is required for GCP' }, { status: 400 });
+  if (provider === 'custom' && !endpointUrl) return NextResponse.json({ error: 'endpointUrl is required for Custom' }, { status: 400 });
 
   addCloudAccount(userId, {
     provider, label, account_id: accountId,
     role_arn: roleArn, external_id: externalId,
     project_id: projectId, service_account_key: serviceAccountKey,
+    endpoint_url: endpointUrl, api_key: apiKey,
   });
 
   let connectionStatus = 'connected';
@@ -43,9 +45,13 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
       const { testAWSConnection } = await import('@/lib/cloud/aws');
       const result = await testAWSConnection({ account_id: accountId, role_arn: roleArn!, external_id: externalId || null });
       if (!result.success) connectionStatus = 'error';
-    } else {
+    } else if (provider === 'gcp') {
       const { testGCPConnection } = await import('@/lib/cloud/gcp');
       const result = await testGCPConnection({ project_id: projectId!, service_account_key: serviceAccountKey || null });
+      if (!result.success) connectionStatus = 'error';
+    } else {
+      const { testCustomConnection } = await import('@/lib/cloud/custom');
+      const result = await testCustomConnection({ endpoint_url: endpointUrl!, api_key: apiKey || null, account_id: accountId });
       if (!result.success) connectionStatus = 'error';
     }
   } catch { connectionStatus = 'error'; }

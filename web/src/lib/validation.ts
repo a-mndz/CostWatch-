@@ -12,13 +12,15 @@ export const LoginSchema = z.object({
 });
 
 export const ConnectSchema = z.object({
-  provider: z.enum(['aws', 'gcp']),
+  provider: z.enum(['aws', 'gcp', 'custom']),
   label: z.string().min(1).max(100),
   accountId: z.string().min(1).max(50),
   roleArn: z.string().optional(),
   externalId: z.string().optional(),
   projectId: z.string().optional(),
   serviceAccountKey: z.string().optional(),
+  endpointUrl: z.string().url().optional(),
+  apiKey: z.string().optional(),
 });
 
 export const AnomalyStatusSchema = z.object({

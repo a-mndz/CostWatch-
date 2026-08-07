@@ -28,7 +28,7 @@ function initSqliteSchema() {
     CREATE TABLE IF NOT EXISTS anomalies (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER REFERENCES users(id), date TEXT NOT NULL, service TEXT NOT NULL, region TEXT NOT NULL, dimension_type TEXT NOT NULL DEFAULT 'service', expected REAL NOT NULL, actual REAL NOT NULL, z_score REAL NOT NULL, severity TEXT NOT NULL CHECK(severity IN ('low', 'medium', 'high')), status TEXT NOT NULL DEFAULT 'open' CHECK(status IN ('open', 'acknowledged', 'resolved')), root_cause TEXT, created_at TEXT DEFAULT (datetime('now')));
     CREATE TABLE IF NOT EXISTS config (user_id INTEGER REFERENCES users(id), key TEXT NOT NULL, value TEXT NOT NULL, updated_at TEXT DEFAULT (datetime('now')), PRIMARY KEY(user_id, key));
     CREATE TABLE IF NOT EXISTS alerts_log (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER REFERENCES users(id), anomaly_id INTEGER REFERENCES anomalies(id), channel TEXT, status TEXT NOT NULL DEFAULT 'sent', sent_at TEXT DEFAULT (datetime('now')));
-    CREATE TABLE IF NOT EXISTS cloud_accounts (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER REFERENCES users(id), provider TEXT NOT NULL CHECK(provider IN ('aws', 'gcp')), label TEXT NOT NULL, account_id TEXT NOT NULL, role_arn TEXT, external_id TEXT, project_id TEXT, service_account_key TEXT, status TEXT NOT NULL DEFAULT 'connected' CHECK(status IN ('connected', 'error', 'disconnected')), last_sync TEXT, created_at TEXT DEFAULT (datetime('now')));
+    CREATE TABLE IF NOT EXISTS cloud_accounts (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER REFERENCES users(id), provider TEXT NOT NULL CHECK(provider IN ('aws', 'gcp', 'custom')), label TEXT NOT NULL, account_id TEXT NOT NULL, role_arn TEXT, external_id TEXT, project_id TEXT, service_account_key TEXT, endpoint_url TEXT, api_key TEXT, status TEXT NOT NULL DEFAULT 'connected' CHECK(status IN ('connected', 'error', 'disconnected')), last_sync TEXT, created_at TEXT DEFAULT (datetime('now')));
     CREATE INDEX IF NOT EXISTS idx_costs_date ON costs(date);
     CREATE INDEX IF NOT EXISTS idx_costs_user ON costs(user_id);
     CREATE INDEX IF NOT EXISTS idx_anomalies_date ON anomalies(date);
@@ -122,13 +122,15 @@ export function setConfig(userId: number, key: string, value: string) {
 export interface CloudAccount {
   id: number;
   user_id: number;
-  provider: 'aws' | 'gcp';
+  provider: 'aws' | 'gcp' | 'custom';
   label: string;
   account_id: string;
   role_arn: string | null;
   external_id: string | null;
   project_id: string | null;
   service_account_key: string | null;
+  endpoint_url: string | null;
+  api_key: string | null;
   status: 'connected' | 'error' | 'disconnected';
   last_sync: string | null;
   created_at: string;
@@ -141,10 +143,10 @@ export function getCloudAccounts(userId: number): CloudAccount[] {
   return db.prepare('SELECT * FROM cloud_accounts WHERE user_id = ? ORDER BY created_at DESC').all(userId) as CloudAccount[];
 }
 
-export function addCloudAccount(userId: number, a: { provider: string; label: string; account_id: string; role_arn?: string; external_id?: string; project_id?: string; service_account_key?: string }) {
+export function addCloudAccount(userId: number, a: { provider: string; label: string; account_id: string; role_arn?: string; external_id?: string; project_id?: string; service_account_key?: string; endpoint_url?: string; api_key?: string }) {
   if (isPG) throw new Error('Use pgAddCloudAccount from db-pg.ts');
   const db = getSqlite();
-  return db.prepare(`INSERT INTO cloud_accounts (user_id, provider, label, account_id, role_arn, external_id, project_id, service_account_key) VALUES (?, @provider, @label, @account_id, @role_arn, @external_id, @project_id, @service_account_key)`).run(userId, a);
+  return db.prepare(`INSERT INTO cloud_accounts (user_id, provider, label, account_id, role_arn, external_id, project_id, service_account_key, endpoint_url, api_key) VALUES (?, @provider, @label, @account_id, @role_arn, @external_id, @project_id, @service_account_key, @endpoint_url, @api_key)`).run(userId, a);
 }
 
 export function removeCloudAccount(userId: number, id: number) {
