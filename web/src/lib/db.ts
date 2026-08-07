@@ -1,5 +1,6 @@
 import Database from 'better-sqlite3';
 import path from 'path';
+import { runMigrations } from './migrations';
 
 const isPG = !!process.env.DATABASE_URL;
 const DB_PATH = path.join(process.cwd(), 'costwatch.db');
@@ -34,15 +35,8 @@ function initSqliteSchema() {
     CREATE INDEX IF NOT EXISTS idx_anomalies_status ON anomalies(status);
     CREATE INDEX IF NOT EXISTS idx_anomalies_user ON anomalies(user_id);
     CREATE INDEX IF NOT EXISTS idx_cloud_accounts_user ON cloud_accounts(user_id);
-    CREATE TABLE IF NOT EXISTS password_resets (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      user_id INTEGER NOT NULL REFERENCES users(id),
-      token TEXT NOT NULL UNIQUE,
-      expires_at TEXT NOT NULL,
-      created_at TEXT DEFAULT (datetime('now'))
-    );
-    CREATE INDEX IF NOT EXISTS idx_password_resets_token ON password_resets(token);
   `);
+  runMigrations(sqliteDb);
 }
 
 // Cost queries — scoped by userId
