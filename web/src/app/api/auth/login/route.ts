@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyPassword, createToken } from '@/lib/auth';
+import { verifyPassword, createAccessToken, createRefreshToken } from '@/lib/auth';
 import { getUserByEmail } from '@/lib/db';
 import { validate, LoginSchema } from '@/lib/validation';
 import { rateLimit } from '@/lib/rate-limit';
@@ -25,10 +25,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
     }
 
-    const token = await createToken({ id: user.id, email: user.email, name: user.name });
+    const accessToken = await createAccessToken({ id: user.id, email: user.email, name: user.name });
+    const refreshToken = await createRefreshToken({ id: user.id, email: user.email, name: user.name });
     logger.info('User logged in', { email });
     const res = NextResponse.json({ success: true, user: { id: user.id, email: user.email, name: user.name } });
-    res.cookies.set('token', token, { httpOnly: true, sameSite: 'lax', path: '/', maxAge: 60 * 60 * 24 * 7 });
+    res.cookies.set('token', accessToken, { httpOnly: true, sameSite: 'lax', path: '/', maxAge: 60 * 15 });
+    res.cookies.set('refresh_token', refreshToken, { httpOnly: true, sameSite: 'lax', path: '/', maxAge: 60 * 60 * 24 * 7 });
     return res;
   } catch (err) {
     logger.error('Login failed', { error: String(err) });

@@ -23,7 +23,10 @@ export async function middleware(request: NextRequest) {
   }
 
   try {
-    await jwtVerify(token, SECRET);
+    const { payload } = await jwtVerify(token, SECRET);
+    if (payload.type !== 'access') {
+      return NextResponse.redirect(new URL('/login', request.url));
+    }
     return NextResponse.next();
   } catch {
     return NextResponse.redirect(new URL('/login', request.url));

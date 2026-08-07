@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { hashPassword, createToken } from '@/lib/auth';
+import { hashPassword, createAccessToken, createRefreshToken } from '@/lib/auth';
 import { createUser, getUserByEmail } from '@/lib/db';
 import { validate, RegisterSchema } from '@/lib/validation';
 import { rateLimit } from '@/lib/rate-limit';
@@ -25,11 +25,12 @@ export async function POST(request: NextRequest) {
 
     const hash = await hashPassword(password);
     const result = createUser(email, hash, name);
-    const token = await createToken({ id: Number(result.lastInsertRowid), email, name: name || null });
-
+    const accessToken = await createAccessToken({ id: Number(result.lastInsertRowid), email, name: name || null });
+    const refreshToken = await createRefreshToken({ id: Number(result.lastInsertRowid), email, name: name || null });
     logger.info('User registered', { email });
     const res = NextResponse.json({ success: true, user: { id: result.lastInsertRowid, email, name } });
-    res.cookies.set('token', token, { httpOnly: true, sameSite: 'lax', path: '/', maxAge: 60 * 60 * 24 * 7 });
+    res.cookies.set('token', accessToken, { httpOnly: true, sameSite: 'lax', path: '/', maxAge: 60 * 15 });
+    res.cookies.set('refresh_token', refreshToken, { httpOnly: true, sameSite: 'lax', path: '/', maxAge: 60 * 60 * 24 * 7 });
     return res;
   } catch (err) {
     logger.error('Registration failed', { error: String(err) });

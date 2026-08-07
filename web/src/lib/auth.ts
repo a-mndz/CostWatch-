@@ -21,21 +21,48 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
   return bcrypt.compare(password, hash);
 }
 
-export async function createToken(user: User): Promise<string> {
-  return new SignJWT({ sub: String(user.id), email: user.email })
+export async function createAccessToken(user: User): Promise<string> {
+  return new SignJWT({ sub: String(user.id), email: user.email, type: 'access' })
+    .setProtectedHeader({ alg: ALG })
+    .setExpirationTime('15m')
+    .setIssuedAt()
+    .sign(SECRET);
+}
+
+export async function createRefreshToken(user: User): Promise<string> {
+  return new SignJWT({ sub: String(user.id), email: user.email, type: 'refresh' })
     .setProtectedHeader({ alg: ALG })
     .setExpirationTime('7d')
     .setIssuedAt()
     .sign(SECRET);
 }
 
-export async function verifyToken(token: string): Promise<{ sub: number; email: string } | null> {
+export async function verifyAccessToken(token: string): Promise<{ sub: number; email: string } | null> {
   try {
     const { payload } = await jwtVerify(token, SECRET);
+    if (payload.type !== 'access') return null;
     return { sub: Number(payload.sub), email: payload.email as string };
   } catch {
     return null;
   }
+}
+
+export async function verifyRefreshToken(token: string): Promise<{ sub: number; email: string } | null> {
+  try {
+    const { payload } = await jwtVerify(token, SECRET);
+    if (payload.type !== 'refresh') return null;
+    return { sub: Number(payload.sub), email: payload.email as string };
+  } catch {
+    return null;
+  }
+}
+
+export async function createToken(user: User): Promise<string> {
+  return createAccessToken(user);
+}
+
+export async function verifyToken(token: string): Promise<{ sub: number; email: string } | null> {
+  return verifyAccessToken(token);
 }
 
 export async function getCurrentUser(): Promise<User | null> {
