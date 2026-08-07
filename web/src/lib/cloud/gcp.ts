@@ -1,5 +1,6 @@
 import { BigQuery } from '@google-cloud/bigquery';
 import { insertCosts } from '../db';
+import { withRetry } from '../retry';
 
 interface GCPAccount {
   project_id: string;
@@ -17,16 +18,18 @@ function getBigQuery(account: GCPAccount): BigQuery {
 export async function syncGCPCosts(userId: number, account: GCPAccount) {
   const bigquery = getBigQuery(account);
 
-  const [rows] = await bigquery.query({
-    query: `
-      SELECT DATE(usage_start_time) as usage_date, service.description as service,
-        location.region as region, SUM(cost) as amount, SUM(usage.amount) as usage_quantity
-      FROM \`${account.project_id}.gcp_billing_export.gcp_billing_export_v1_*\`
-      WHERE usage_start_time >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 30 DAY)
-      GROUP BY usage_date, service, region ORDER BY usage_date
-    `,
-    location: 'US',
-  });
+  const [rows] = await withRetry(() =>
+    bigquery.query({
+      query: `
+        SELECT DATE(usage_start_time) as usage_date, service.description as service,
+          location.region as region, SUM(cost) as amount, SUM(usage.amount) as usage_quantity
+        FROM \`${account.project_id}.gcp_billing_export.gcp_billing_export_v1_*\`
+        WHERE usage_start_time >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 30 DAY)
+        GROUP BY usage_date, service, region ORDER BY usage_date
+      `,
+      location: 'US',
+    })
+  );
 
   const costRows = rows.map((row: Record<string, unknown>) => ({
     date: (row.usage_date as Date).toISOString().split('T')[0],

@@ -1,6 +1,7 @@
 import { CostExplorerClient, GetCostAndUsageCommand } from '@aws-sdk/client-cost-explorer';
 import { STSClient, AssumeRoleCommand } from '@aws-sdk/client-sts';
 import { insertCosts } from '../db';
+import { withRetry } from '../retry';
 
 interface AWSAccount {
   account_id: string;
@@ -33,18 +34,20 @@ export async function syncAWSCosts(userId: number, account: AWSAccount) {
   const startDate = new Date();
   startDate.setDate(startDate.getDate() - 30);
 
-  const result = await client.send(new GetCostAndUsageCommand({
-    TimePeriod: {
-      Start: startDate.toISOString().split('T')[0],
-      End: endDate.toISOString().split('T')[0],
-    },
-    Granularity: 'DAILY',
-    Metrics: ['UnblendedCost'],
-    GroupBy: [
-      { Type: 'DIMENSION', Key: 'SERVICE' },
-      { Type: 'DIMENSION', Key: 'REGION' },
-    ],
-  }));
+  const result = await withRetry(() =>
+    client.send(new GetCostAndUsageCommand({
+      TimePeriod: {
+        Start: startDate.toISOString().split('T')[0],
+        End: endDate.toISOString().split('T')[0],
+      },
+      Granularity: 'DAILY',
+      Metrics: ['UnblendedCost'],
+      GroupBy: [
+        { Type: 'DIMENSION', Key: 'SERVICE' },
+        { Type: 'DIMENSION', Key: 'REGION' },
+      ],
+    }))
+  );
 
   const rows = [];
   for (const resultItem of result.ResultsByTime || []) {
