@@ -1,15 +1,23 @@
 services:
   costwatch:
-    build: .
+    build:
+      context: .
+      args:
+        JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET to a value >= 32 chars}
     ports:
       - "3000:3000"
     environment:
-      - JWT_SECRET=${JWT_SECRET:-change-me-in-production}
       - DATABASE_URL=${DATABASE_URL:-}
       - LOG_LEVEL=${LOG_LEVEL:-info}
     volumes:
       - costwatch-data:/app/data
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
 volumes:
   costwatch-data:
