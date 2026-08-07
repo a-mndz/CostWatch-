@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
       const token = randomBytes(32).toString('hex');
       const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
       createPasswordResetToken(user.id, token, expiresAt);
-      logger.info('Password reset requested', { email: v.data.email, token });
+      logger.info('Password reset requested', { email: v.data.email });
     }
 
     return NextResponse.json({ success: true, message: 'If the email exists, a reset link has been sent' });

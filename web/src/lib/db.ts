@@ -180,21 +180,25 @@ export function getUserByEmail(email: string) {
 
 // Password reset tokens
 export function createPasswordResetToken(userId: number, token: string, expiresAt: string) {
-  const db = getDb();
+  if (isPG) throw new Error('Use pgCreatePasswordResetToken from db-pg.ts');
+  const db = getSqlite();
   db.prepare("INSERT INTO password_resets (user_id, token, expires_at) VALUES (?, ?, ?)").run(userId, token, expiresAt);
 }
 
 export function getPasswordResetToken(token: string) {
-  const db = getDb();
+  if (isPG) throw new Error('Use pgGetPasswordResetToken from db-pg.ts');
+  const db = getSqlite();
   return db.prepare("SELECT user_id, expires_at FROM password_resets WHERE token = ?").get(token) as { user_id: number; expires_at: string } | undefined;
 }
 
 export function deletePasswordResetToken(token: string) {
-  const db = getDb();
+  if (isPG) throw new Error('Use pgDeletePasswordResetToken from db-pg.ts');
+  const db = getSqlite();
   db.prepare("DELETE FROM password_resets WHERE token = ?").run(token);
 }
 
 export function updateUserPassword(userId: number, passwordHash: string) {
-  const db = getDb();
+  if (isPG) throw new Error('Use pgUpdateUserPassword from db-pg.ts');
+  const db = getSqlite();
   db.prepare("UPDATE users SET password_hash = ? WHERE id = ?").run(passwordHash, userId);
 }
