@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { jwtVerify } from 'jose';
 import { getEnv } from '@/lib/env';
+import { logRequest } from '@/lib/request-logger';
 
 const { JWT_SECRET } = getEnv();
 const SECRET = new TextEncoder().encode(JWT_SECRET);
@@ -33,39 +34,54 @@ function isValidCsrfRequest(request: NextRequest): boolean {
 }
 
 export async function middleware(request: NextRequest) {
+  const start = performance.now();
   const { pathname } = request.nextUrl;
 
   if (PUBLIC_PATHS.some(p => pathname === p || pathname.startsWith('/_next') || pathname.startsWith('/public'))) {
-    return NextResponse.next();
+    const res = NextResponse.next();
+    logRequest(request, res, performance.now() - start);
+    return res;
   }
 
   // HTTPS enforcement in production
   if (process.env.NODE_ENV === 'production' && !request.url.startsWith('https://')) {
     const httpsUrl = request.url.replace('http://', 'https://');
-    return NextResponse.redirect(httpsUrl);
+    const res = NextResponse.redirect(httpsUrl);
+    logRequest(request, res, performance.now() - start);
+    return res;
   }
 
   if (pathname.startsWith('/api/auth/')) {
-    return NextResponse.next();
+    const res = NextResponse.next();
+    logRequest(request, res, performance.now() - start);
+    return res;
   }
 
   if (pathname === '/api/health') {
-    return NextResponse.next();
+    const res = NextResponse.next();
+    logRequest(request, res, performance.now() - start);
+    return res;
   }
 
   if (!isValidCsrfRequest(request)) {
-    return NextResponse.json({ error: 'Invalid CSRF token' }, { status: 403 });
+    const res = NextResponse.json({ error: 'Invalid CSRF token' }, { status: 403 });
+    logRequest(request, res, performance.now() - start);
+    return res;
   }
 
   const token = request.cookies.get('token')?.value;
   if (!token) {
-    return NextResponse.redirect(new URL('/login', request.url));
+    const res = NextResponse.redirect(new URL('/login', request.url));
+    logRequest(request, res, performance.now() - start);
+    return res;
   }
 
   try {
     const { payload } = await jwtVerify(token, SECRET);
     if (payload.type !== 'access') {
-      return NextResponse.redirect(new URL('/login', request.url));
+      const res = NextResponse.redirect(new URL('/login', request.url));
+      logRequest(request, res, performance.now() - start);
+      return res;
     }
 
     const response = NextResponse.next();
@@ -78,9 +94,12 @@ export async function middleware(request: NextRequest) {
         maxAge: 60 * 60,
       });
     }
+    logRequest(request, response, performance.now() - start);
     return response;
   } catch {
-    return NextResponse.redirect(new URL('/login', request.url));
+    const res = NextResponse.redirect(new URL('/login', request.url));
+    logRequest(request, res, performance.now() - start);
+    return res;
   }
 }
 
