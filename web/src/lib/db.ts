@@ -10,7 +10,7 @@ export function getDb(): Database.Database {
   return getSqlite();
 }
 
-function getSqlite(): Database.Database {
+export function getSqlite(): Database.Database {
   if (!sqliteDb) {
     sqliteDb = new Database(DB_PATH);
     sqliteDb.pragma('journal_mode = WAL');
@@ -201,4 +201,9 @@ export function updateUserPassword(userId: number, passwordHash: string) {
   if (isPG) throw new Error('Use pgUpdateUserPassword from db-pg.ts');
   const db = getSqlite();
   db.prepare("UPDATE users SET password_hash = ? WHERE id = ?").run(passwordHash, userId);
+}
+
+export function closeDb() {
+  const db = getSqlite();
+  db.close();
 }

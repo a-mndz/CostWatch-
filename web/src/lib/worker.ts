@@ -51,3 +51,29 @@ export function triggerSync() {
 export function getSyncStatus() {
   return { running: isRunning };
 }
+
+let isShuttingDown = false;
+
+async function shutdown() {
+  if (isShuttingDown) return;
+  isShuttingDown = true;
+
+  logger.info('Graceful shutdown initiated');
+
+  while (isRunning) {
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
+
+  try {
+    const { closeDb } = await import('./db');
+    closeDb();
+    logger.info('Database connection closed');
+  } catch (err) {
+    logger.error('Error closing database', { error: String(err) });
+  }
+
+  process.exit(0);
+}
+
+process.on('SIGTERM', shutdown);
+process.on('SIGINT', shutdown);
