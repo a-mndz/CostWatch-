@@ -1,8 +1,10 @@
 import bcrypt from 'bcryptjs';
 import { SignJWT, jwtVerify } from 'jose';
 import { cookies } from 'next/headers';
+import { getEnv } from './env';
 
-const SECRET = new TextEncoder().encode(process.env.JWT_SECRET || 'costwatch-dev-secret-change-in-production');
+const { JWT_SECRET } = getEnv();
+const SECRET = new TextEncoder().encode(JWT_SECRET);
 const ALG = 'HS256';
 
 export interface User {
