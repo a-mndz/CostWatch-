@@ -34,6 +34,15 @@ export const SyncSchema = z.object({
   accountId: z.number().int().positive(),
 });
 
+export const ForgotPasswordSchema = z.object({
+  email: z.string().email(),
+});
+
+export const ResetPasswordSchema = z.object({
+  token: z.string().min(1),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
+});
+
 export function validate<T>(schema: z.ZodSchema<T>, data: unknown): { success: true; data: T } | { success: false; error: string } {
   const result = schema.safeParse(data);
   if (result.success) return { success: true, data: result.data };

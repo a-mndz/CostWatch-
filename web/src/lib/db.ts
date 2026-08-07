@@ -34,6 +34,14 @@ function initSqliteSchema() {
     CREATE INDEX IF NOT EXISTS idx_anomalies_status ON anomalies(status);
     CREATE INDEX IF NOT EXISTS idx_anomalies_user ON anomalies(user_id);
     CREATE INDEX IF NOT EXISTS idx_cloud_accounts_user ON cloud_accounts(user_id);
+    CREATE TABLE IF NOT EXISTS password_resets (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES users(id),
+      token TEXT NOT NULL UNIQUE,
+      expires_at TEXT NOT NULL,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_password_resets_token ON password_resets(token);
   `);
 }
 
@@ -168,4 +176,25 @@ export function getUserByEmail(email: string) {
   if (isPG) throw new Error('Use pgGetUserByEmail from db-pg.ts');
   const db = getSqlite();
   return db.prepare('SELECT id, email, password_hash, name FROM users WHERE email = ?').get(email) as { id: number; email: string; password_hash: string; name: string | null; } | undefined;
+}
+
+// Password reset tokens
+export function createPasswordResetToken(userId: number, token: string, expiresAt: string) {
+  const db = getDb();
+  db.prepare("INSERT INTO password_resets (user_id, token, expires_at) VALUES (?, ?, ?)").run(userId, token, expiresAt);
+}
+
+export function getPasswordResetToken(token: string) {
+  const db = getDb();
+  return db.prepare("SELECT user_id, expires_at FROM password_resets WHERE token = ?").get(token) as { user_id: number; expires_at: string } | undefined;
+}
+
+export function deletePasswordResetToken(token: string) {
+  const db = getDb();
+  db.prepare("DELETE FROM password_resets WHERE token = ?").run(token);
+}
+
+export function updateUserPassword(userId: number, passwordHash: string) {
+  const db = getDb();
+  db.prepare("UPDATE users SET password_hash = ? WHERE id = ?").run(passwordHash, userId);
 }
