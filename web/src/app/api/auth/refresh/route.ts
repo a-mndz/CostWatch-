@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyRefreshToken, createAccessToken } from '@/lib/auth';
 import { getDb } from '@/lib/db';
+import { rateLimit } from '@/lib/rate-limit';
 import { logger } from '@/lib/logger';
 
 export async function POST(request: NextRequest) {
+  const rl = rateLimit('auth:refresh', 20, 60000);
+  if (!rl.allowed) {
+    return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
+  }
+
   try {
     const refreshToken = request.cookies.get('refresh_token')?.value;
     if (!refreshToken) {
