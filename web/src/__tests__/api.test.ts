@@ -55,12 +55,18 @@ afterEach(() => {
 
 const today = new Date().toISOString().split('T')[0];
 
+function mockRequest(url: string, init?: RequestInit): any {
+  const req = new Request(url, init);
+  (req as any).nextUrl = new URL(url);
+  return req;
+}
+
 describe('POST /api/costs', () => {
   it('parses CSV and returns counts', async () => {
     const csv = `date,service,region,account,amount,usageQuantity\n${today},EC2,us-east-1,default,100,1000`;
     const { POST } = await import('@/app/api/costs/route');
-    const req = new Request('http://localhost/api/costs', { method: 'POST', body: csv });
-    const res = await POST(req as any);
+    const req = mockRequest('http://localhost/api/costs', { method: 'POST', body: csv });
+    const res = await POST(req);
     const data = await res.json();
     expect(data.recordsProcessed).toBe(1);
     expect(data.anomalies).toBeDefined();
@@ -68,8 +74,8 @@ describe('POST /api/costs', () => {
 
   it('returns 400 for empty CSV', async () => {
     const { POST } = await import('@/app/api/costs/route');
-    const req = new Request('http://localhost/api/costs', { method: 'POST', body: '' });
-    const res = await POST(req as any);
+    const req = mockRequest('http://localhost/api/costs', { method: 'POST', body: '' });
+    const res = await POST(req);
     expect(res.status).toBe(400);
   });
 });
@@ -77,8 +83,8 @@ describe('POST /api/costs', () => {
 describe('GET /api/costs', () => {
   it('returns cost data structure', async () => {
     const { GET } = await import('@/app/api/costs/route');
-    const req = new Request('http://localhost/api/costs');
-    const res = await GET(req as any);
+    const req = mockRequest('http://localhost/api/costs');
+    const res = await GET(req);
     const data = await res.json();
     expect(data).toHaveProperty('daily');
     expect(data).toHaveProperty('byService');

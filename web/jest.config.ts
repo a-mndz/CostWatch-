@@ -8,6 +8,17 @@ const config: Config = {
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
   },
+  setupFiles: ['<rootDir>/jest.setup.ts'],
+  transformIgnorePatterns: [
+    'node_modules/(?!(jose)/)',
+  ],
+  transform: {
+    '^.+\\.[tj]sx?$': ['ts-jest', {
+      tsconfig: {
+        allowJs: true,
+      },
+    }],
+  },
 };
 
 export default config;
