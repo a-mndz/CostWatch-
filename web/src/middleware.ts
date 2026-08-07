@@ -67,7 +67,7 @@ export async function middleware(request: NextRequest) {
       const csrfToken = generateCsrfToken();
       response.cookies.set('csrf_token', csrfToken, {
         httpOnly: false,
-        sameSite: 'strict',
+        sameSite: 'lax',
         path: '/',
         maxAge: 60 * 60,
       });
