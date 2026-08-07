@@ -1,5 +1,5 @@
 import { logger } from '@/lib/logger';
-import { retry } from '@/lib/retry';
+import { withRetry } from '@/lib/retry';
 
 interface CustomCostRow {
   date: string;
@@ -17,7 +17,7 @@ interface CustomProviderConfig {
 }
 
 export async function fetchCustomCosts(config: CustomProviderConfig): Promise<{ success: boolean; rows?: CustomCostRow[]; error?: string }> {
-  return retry(async () => {
+  return withRetry(async () => {
     logger.info('Fetching custom cloud costs', { endpoint: config.endpoint_url });
 
     const headers: Record<string, string> = {
