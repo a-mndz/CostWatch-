@@ -27,6 +27,34 @@ export const migrations: Migration[] = [
       db.exec(`DROP TABLE IF EXISTS password_resets`);
     },
   },
+  {
+    id: 2,
+    name: 'add_user_id_columns',
+    up(db) {
+      const tables = ['costs', 'anomalies', 'alerts_log', 'cloud_accounts'];
+      for (const table of tables) {
+        const cols = (db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[]).map(c => c.name);
+        if (!cols.includes('user_id')) {
+          db.exec(`ALTER TABLE ${table} ADD COLUMN user_id INTEGER REFERENCES users(id)`);
+        }
+      }
+      // config needs special handling: old PK was just (key), new PK is (user_id, key)
+      const configCols = (db.prepare('PRAGMA table_info(config)').all() as { name: string }[]).map(c => c.name);
+      if (!configCols.includes('user_id')) {
+        db.exec(`ALTER TABLE config ADD COLUMN user_id INTEGER REFERENCES users(id)`);
+        // Recreate with correct PK (SQLite can't alter PKs)
+        db.exec(`
+          CREATE TABLE config_new (user_id INTEGER REFERENCES users(id), key TEXT NOT NULL, value TEXT NOT NULL, updated_at TEXT DEFAULT (datetime('now')), PRIMARY KEY(user_id, key));
+          INSERT INTO config_new (key, value, updated_at) SELECT key, value, updated_at FROM config;
+          DROP TABLE config;
+          ALTER TABLE config_new RENAME TO config;
+        `);
+      }
+    },
+    down(db) {
+      // SQLite doesn't support DROP COLUMN in older versions; skip
+    },
+  },
 ];
 
 export function runMigrations(db: Database.Database) {
