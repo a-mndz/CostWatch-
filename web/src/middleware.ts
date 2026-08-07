@@ -39,6 +39,12 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // HTTPS enforcement in production
+  if (process.env.NODE_ENV === 'production' && !request.url.startsWith('https://')) {
+    const httpsUrl = request.url.replace('http://', 'https://');
+    return NextResponse.redirect(httpsUrl);
+  }
+
   if (pathname.startsWith('/api/auth/')) {
     return NextResponse.next();
   }
