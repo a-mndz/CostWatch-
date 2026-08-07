@@ -4,7 +4,7 @@ import { getEnv } from '@/lib/env';
 
 const { JWT_SECRET } = getEnv();
 const SECRET = new TextEncoder().encode(JWT_SECRET);
-const PUBLIC_PATHS = ['/', '/login', '/api/auth/login', '/api/auth/register', '/api/auth/me', '/api/auth/logout'];
+const PUBLIC_PATHS = ['/', '/login', '/api/auth/login', '/api/auth/register', '/api/auth/me', '/api/auth/logout', '/api/auth/refresh'];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
