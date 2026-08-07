@@ -1,0 +1,154 @@
+@import "tailwindcss";
+
+:root {
+  /* Brand palette — OKLCH */
+  --color-primary: oklch(55% 0.15 175);
+  --color-primary-light: oklch(65% 0.12 175);
+  --color-primary-dark: oklch(45% 0.15 175);
+  --color-secondary: oklch(75% 0.15 75);
+  --color-secondary-light: oklch(82% 0.1 75);
+  --color-tertiary: oklch(65% 0.18 25);
+  --color-tertiary-light: oklch(75% 0.12 25);
+
+  /* Surfaces — dark mode */
+  --bg: oklch(10% 0.008 175);
+  --bg-surface: oklch(14% 0.008 175);
+  --bg-elevated: oklch(18% 0.008 175);
+  --bg-hover: oklch(22% 0.008 175);
+
+  /* Text */
+  --text-primary: oklch(95% 0.005 175);
+  --text-secondary: oklch(82% 0.01 175);
+  --text-muted: oklch(62% 0.01 175);
+
+  /* Borders */
+  --border: oklch(22% 0.01 175);
+  --border-subtle: oklch(18% 0.008 175);
+
+  /* Semantic */
+  --success: oklch(70% 0.18 145);
+  --warning: oklch(75% 0.15 75);
+  --error: oklch(65% 0.18 25);
+
+  /* Easing */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+}
+
+@theme inline {
+  --color-background: var(--bg);
+  --color-foreground: var(--text-primary);
+  --font-sans: var(--font-body);
+  --font-serif: var(--font-display);
+  --font-mono: var(--font-mono);
+}
+
+body {
+  background: var(--bg);
+  color: var(--text-primary);
+  font-family: var(--font-body), system-ui, sans-serif;
+  font-weight: 400;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Typography hierarchy */
+h1, h2, h3 {
+  font-family: var(--font-display), Georgia, serif;
+  font-weight: 500;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+h1 {
+  font-size: clamp(2.5rem, 5vw, 4rem);
+  letter-spacing: -0.03em;
+}
+
+h2 {
+  font-size: clamp(1.75rem, 3vw, 2.5rem);
+}
+
+h3 {
+  font-size: clamp(1.25rem, 2vw, 1.5rem);
+  font-family: var(--font-body), system-ui, sans-serif;
+  font-weight: 600;
+}
+
+/* Links */
+a {
+  color: var(--color-primary-light);
+  text-decoration: none;
+  transition: color 160ms var(--ease-out-quart);
+}
+
+a:hover {
+  color: var(--text-primary);
+}
+
+/* Skeleton pulse */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.animate-pulse {
+  animation: pulse 1.5s var(--ease-in-out) infinite;
+}
+
+/* Press feedback */
+button:active {
+  transform: scale(0.97);
+}
+
+/* Focus */
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Scroll reveal animation */
+@keyframes reveal-up {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.reveal {
+  opacity: 0;
+  animation: reveal-up 250ms var(--ease-out) forwards;
+}
+
+.reveal-delay-1 { animation-delay: 80ms; }
+.reveal-delay-2 { animation-delay: 160ms; }
+.reveal-delay-3 { animation-delay: 240ms; }
+.reveal-delay-4 { animation-delay: 320ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    opacity: 1;
+    animation: none;
+  }
+
+  * {
+    transform: none !important;
+  }
+}
