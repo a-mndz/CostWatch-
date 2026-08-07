@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Skeleton } from '../../components/Skeleton';
 import { ErrorBoundary } from '../../components/ErrorBoundary';
+import { apiFetch } from '@/lib/api';
 
 interface CloudAccount {
   id: number; provider: string; label: string; account_id: string;
@@ -46,8 +47,8 @@ function SettingsContent() {
 
   useEffect(() => {
     Promise.all([
-      fetch('/api/settings').then(r => r.json()),
-      fetch('/api/connect').then(r => r.json()),
+      apiFetch('/api/settings').then(r => r.json()),
+      apiFetch('/api/connect').then(r => r.json()),
     ]).then(([settings, connect]) => {
       setWebhookUrl(settings.webhookUrl || '');
       setSmtpHost(settings.smtpHost || '');
@@ -91,7 +92,7 @@ function SettingsContent() {
     setConnecting(true);
     setMessage(null);
     try {
-      const res = await fetch('/api/connect', {
+      const res = await apiFetch('/api/connect', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -106,7 +107,7 @@ function SettingsContent() {
       if (res.ok) {
         setMessage({ type: 'success', text: 'AWS account connected.' });
         setAwsLabel(''); setAwsAccountId(''); setAwsRoleArn(''); setAwsExternalId('');
-        const fresh = await fetch('/api/connect').then(r => r.json());
+        const fresh = await apiFetch('/api/connect').then(r => r.json());
         setAccounts(fresh.accounts || []);
       } else {
         setMessage({ type: 'error', text: data.error || 'Connection failed.' });
@@ -121,7 +122,7 @@ function SettingsContent() {
     setConnecting(true);
     setMessage(null);
     try {
-      const res = await fetch('/api/connect', {
+      const res = await apiFetch('/api/connect', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -136,7 +137,7 @@ function SettingsContent() {
       if (res.ok) {
         setMessage({ type: 'success', text: 'GCP project connected.' });
         setGcpLabel(''); setGcpProjectId(''); setGcpServiceAccount('');
-        const fresh = await fetch('/api/connect').then(r => r.json());
+        const fresh = await apiFetch('/api/connect').then(r => r.json());
         setAccounts(fresh.accounts || []);
       } else {
         setMessage({ type: 'error', text: data.error || 'Connection failed.' });
@@ -151,7 +152,7 @@ function SettingsContent() {
     setConnecting(true);
     setMessage(null);
     try {
-      const res = await fetch('/api/connect', {
+      const res = await apiFetch('/api/connect', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -166,7 +167,7 @@ function SettingsContent() {
       if (res.ok) {
         setMessage({ type: 'success', text: 'Custom provider connected.' });
         setCustomLabel(''); setCustomAccountId(''); setCustomEndpoint(''); setCustomApiKey('');
-        const fresh = await fetch('/api/connect').then(r => r.json());
+        const fresh = await apiFetch('/api/connect').then(r => r.json());
         setAccounts(fresh.accounts || []);
       } else {
         setMessage({ type: 'error', text: data.error || 'Connection failed.' });
@@ -179,14 +180,14 @@ function SettingsContent() {
 
   async function handleDisconnect(id: number) {
     if (!confirm('Disconnect this account?')) return;
-    await fetch(`/api/connect?id=${id}`, { method: 'DELETE' });
+    await apiFetch(`/api/connect?id=${id}`, { method: 'DELETE' });
     setAccounts(prev => prev.filter(a => a.id !== id));
     setMessage({ type: 'success', text: 'Account disconnected.' });
   }
 
   async function handleSaveWebhook() {
     setMessage(null);
-    const res = await fetch('/api/settings', {
+    const res = await apiFetch('/api/settings', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -442,7 +443,7 @@ function SettingsContent() {
                 </div>
                 <div className="flex items-center gap-2">
                   <button onClick={async () => {
-                    const res = await fetch('/api/sync', {
+                    const res = await apiFetch('/api/sync', {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({ accountId: a.id }),
