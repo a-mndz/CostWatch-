@@ -7,34 +7,40 @@ jest.mock('@/lib/db', () => {
   testDb.pragma('foreign_keys = ON');
   testDb.exec(`
     CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT UNIQUE NOT NULL, password_hash TEXT NOT NULL, name TEXT, created_at TEXT DEFAULT (datetime('now')));
-    CREATE TABLE IF NOT EXISTS costs (id INTEGER PRIMARY KEY AUTOINCREMENT, date TEXT NOT NULL, service TEXT NOT NULL, region TEXT NOT NULL DEFAULT 'unknown', account TEXT NOT NULL DEFAULT 'default', amount REAL NOT NULL, usage_quantity REAL DEFAULT 0, created_at TEXT DEFAULT (datetime('now')), UNIQUE(date, service, region, account));
-    CREATE TABLE IF NOT EXISTS anomalies (id INTEGER PRIMARY KEY AUTOINCREMENT, date TEXT NOT NULL, service TEXT NOT NULL, region TEXT NOT NULL, dimension_type TEXT NOT NULL DEFAULT 'service', expected REAL NOT NULL, actual REAL NOT NULL, z_score REAL NOT NULL, severity TEXT NOT NULL CHECK(severity IN ('low', 'medium', 'high')), status TEXT NOT NULL DEFAULT 'open' CHECK(status IN ('open', 'acknowledged', 'resolved')), root_cause TEXT, created_at TEXT DEFAULT (datetime('now')));
-    CREATE TABLE IF NOT EXISTS config (key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at TEXT DEFAULT (datetime('now')));
-    CREATE TABLE IF NOT EXISTS alerts_log (id INTEGER PRIMARY KEY AUTOINCREMENT, anomaly_id INTEGER REFERENCES anomalies(id), channel TEXT, status TEXT NOT NULL DEFAULT 'sent', sent_at TEXT DEFAULT (datetime('now')));
-    CREATE TABLE IF NOT EXISTS cloud_accounts (id INTEGER PRIMARY KEY AUTOINCREMENT, provider TEXT NOT NULL CHECK(provider IN ('aws', 'gcp')), label TEXT NOT NULL, account_id TEXT NOT NULL, role_arn TEXT, external_id TEXT, project_id TEXT, service_account_key TEXT, status TEXT NOT NULL DEFAULT 'connected' CHECK(status IN ('connected', 'error', 'disconnected')), last_sync TEXT, created_at TEXT DEFAULT (datetime('now')));
+    CREATE TABLE IF NOT EXISTS costs (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER REFERENCES users(id), date TEXT NOT NULL, service TEXT NOT NULL, region TEXT NOT NULL DEFAULT 'unknown', account TEXT NOT NULL DEFAULT 'default', amount REAL NOT NULL, usage_quantity REAL DEFAULT 0, created_at TEXT DEFAULT (datetime('now')), UNIQUE(user_id, date, service, region, account));
+    CREATE TABLE IF NOT EXISTS anomalies (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER REFERENCES users(id), date TEXT NOT NULL, service TEXT NOT NULL, region TEXT NOT NULL, dimension_type TEXT NOT NULL DEFAULT 'service', expected REAL NOT NULL, actual REAL NOT NULL, z_score REAL NOT NULL, severity TEXT NOT NULL CHECK(severity IN ('low', 'medium', 'high')), status TEXT NOT NULL DEFAULT 'open' CHECK(status IN ('open', 'acknowledged', 'resolved')), root_cause TEXT, created_at TEXT DEFAULT (datetime('now')));
+    CREATE TABLE IF NOT EXISTS config (user_id INTEGER REFERENCES users(id), key TEXT NOT NULL, value TEXT NOT NULL, updated_at TEXT DEFAULT (datetime('now')), PRIMARY KEY(user_id, key));
+    CREATE TABLE IF NOT EXISTS alerts_log (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER REFERENCES users(id), anomaly_id INTEGER REFERENCES anomalies(id), channel TEXT, status TEXT NOT NULL DEFAULT 'sent', sent_at TEXT DEFAULT (datetime('now')));
+    CREATE TABLE IF NOT EXISTS cloud_accounts (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER REFERENCES users(id), provider TEXT NOT NULL CHECK(provider IN ('aws', 'gcp')), label TEXT NOT NULL, account_id TEXT NOT NULL, role_arn TEXT, external_id TEXT, project_id TEXT, service_account_key TEXT, status TEXT NOT NULL DEFAULT 'connected' CHECK(status IN ('connected', 'error', 'disconnected')), last_sync TEXT, created_at TEXT DEFAULT (datetime('now')));
     CREATE INDEX IF NOT EXISTS idx_costs_date ON costs(date);
-    CREATE INDEX IF NOT EXISTS idx_costs_service ON costs(service);
+    CREATE INDEX IF NOT EXISTS idx_costs_user ON costs(user_id);
     CREATE INDEX IF NOT EXISTS idx_anomalies_date ON anomalies(date);
     CREATE INDEX IF NOT EXISTS idx_anomalies_status ON anomalies(status);
+    CREATE INDEX IF NOT EXISTS idx_anomalies_user ON anomalies(user_id);
+    CREATE INDEX IF NOT EXISTS idx_cloud_accounts_user ON cloud_accounts(user_id);
   `);
+  // Create test user
+  testDb.prepare('INSERT INTO users (email, password_hash, name) VALUES (?, ?, ?)').run('test@test.com', 'hash', 'Test');
   mockDb = testDb;
+
+  const TEST_USER_ID = 1;
 
   return {
     getDb: () => testDb,
-    insertCosts: (rows: Array<{date: string; service: string; region: string; account: string; amount: number; usage_quantity: number}>) => {
-      const insert = testDb.prepare('INSERT OR REPLACE INTO costs (date, service, region, account, amount, usage_quantity) VALUES (@date, @service, @region, @account, @amount, @usage_quantity)');
+    insertCosts: (userId: number, rows: Array<{date: string; service: string; region: string; account: string; amount: number; usage_quantity: number}>) => {
+      const insert = testDb.prepare('INSERT OR REPLACE INTO costs (user_id, date, service, region, account, amount, usage_quantity) VALUES (?, @date, @service, @region, @account, @amount, @usage_quantity)');
       const tx = testDb.transaction((rows: Array<{date: string; service: string; region: string; account: string; amount: number; usage_quantity: number}>) => {
-        for (const row of rows) insert.run(row);
+        for (const row of rows) insert.run(userId, row);
       });
       tx(rows);
       return rows.length;
     },
-    getCostsByDay: (days: number) => testDb.prepare(`SELECT date, SUM(amount) as total FROM costs WHERE date >= date('now', '-' || ? || ' days') GROUP BY date ORDER BY date`).all(days),
-    getCostsByService: () => testDb.prepare(`SELECT service, SUM(amount) as total FROM costs WHERE date >= date('now', '-30 days') GROUP BY service ORDER BY total DESC`).all(),
-    getCostSummary: () => testDb.prepare(`SELECT SUM(amount) as total_spend, COUNT(DISTINCT date) as days, MIN(date) as first_date, MAX(date) as last_date FROM costs WHERE date >= date('now', '-30 days')`).get(),
-    getOpenAnomalyCount: () => (testDb.prepare("SELECT COUNT(*) as count FROM anomalies WHERE status = 'open'").get() as {count: number}).count,
-    getAnomalies: () => testDb.prepare('SELECT * FROM anomalies ORDER BY date DESC').all(),
-    getConfig: (key: string) => (testDb.prepare('SELECT value FROM config WHERE key = ?').get(key) as {value: string} | undefined)?.value,
+    getCostsByDay: (userId: number, days: number) => testDb.prepare(`SELECT date, SUM(amount) as total FROM costs WHERE user_id = ? AND date >= date('now', '-' || ? || ' days') GROUP BY date ORDER BY date`).all(userId, days),
+    getCostsByService: (userId: number) => testDb.prepare(`SELECT service, SUM(amount) as total FROM costs WHERE user_id = ? AND date >= date('now', '-30 days') GROUP BY service ORDER BY total DESC`).all(userId),
+    getCostSummary: (userId: number) => testDb.prepare(`SELECT SUM(amount) as total_spend, COUNT(DISTINCT date) as days, MIN(date) as first_date, MAX(date) as last_date FROM costs WHERE user_id = ? AND date >= date('now', '-30 days')`).get(userId),
+    getOpenAnomalyCount: (userId: number) => (testDb.prepare("SELECT COUNT(*) as count FROM anomalies WHERE user_id = ? AND status = 'open'").get(userId) as {count: number}).count,
+    getAnomalies: (userId: number) => testDb.prepare('SELECT * FROM anomalies WHERE user_id = ? ORDER BY date DESC').all(userId),
+    getConfig: (userId: number, key: string) => (testDb.prepare('SELECT value FROM config WHERE user_id = ? AND key = ?').get(userId, key) as {value: string} | undefined)?.value,
   };
 });
 
@@ -71,7 +77,8 @@ describe('POST /api/costs', () => {
 describe('GET /api/costs', () => {
   it('returns cost data structure', async () => {
     const { GET } = await import('@/app/api/costs/route');
-    const res = await GET();
+    const req = new Request('http://localhost/api/costs');
+    const res = await GET(req as any);
     const data = await res.json();
     expect(data).toHaveProperty('daily');
     expect(data).toHaveProperty('byService');
