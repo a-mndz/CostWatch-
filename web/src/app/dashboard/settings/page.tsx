@@ -36,12 +36,26 @@ function SettingsContent() {
   const [customEndpoint, setCustomEndpoint] = useState('');
   const [customApiKey, setCustomApiKey] = useState('');
 
+  // SMTP form
+  const [smtpHost, setSmtpHost] = useState('');
+  const [smtpPort, setSmtpPort] = useState('587');
+  const [smtpUser, setSmtpUser] = useState('');
+  const [smtpPass, setSmtpPass] = useState('');
+  const [smtpFrom, setSmtpFrom] = useState('');
+  const [alertEmail, setAlertEmail] = useState('');
+
   useEffect(() => {
     Promise.all([
       fetch('/api/settings').then(r => r.json()),
       fetch('/api/connect').then(r => r.json()),
     ]).then(([settings, connect]) => {
       setWebhookUrl(settings.webhookUrl || '');
+      setSmtpHost(settings.smtpHost || '');
+      setSmtpPort(settings.smtpPort || '587');
+      setSmtpUser(settings.smtpUser || '');
+      setSmtpPass(settings.smtpPass || '');
+      setSmtpFrom(settings.smtpFrom || '');
+      setAlertEmail(settings.alertEmail || '');
       setAccounts(connect.accounts || []);
       setLoading(false);
     }).catch(() => setLoading(false));
@@ -175,11 +189,19 @@ function SettingsContent() {
     const res = await fetch('/api/settings', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ webhookUrl }),
+      body: JSON.stringify({
+        webhookUrl,
+        smtpHost,
+        smtpPort: smtpPort ? Number(smtpPort) : undefined,
+        smtpUser,
+        smtpPass,
+        smtpFrom,
+        alertEmail,
+      }),
     });
     const data = await res.json();
     setMessage(res.ok
-      ? { type: 'success', text: 'Webhook saved.' }
+      ? { type: 'success', text: 'Settings saved.' }
       : { type: 'error', text: data.error || 'Failed.' }
     );
   }
@@ -444,27 +466,89 @@ function SettingsContent() {
         </div>
       )}
 
-      {/* Slack Webhook */}
+      {/* Alert Settings */}
       <div className="mt-8 rounded-xl p-6" style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border)' }}>
-        <h2 className="text-lg font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>Slack Alerts</h2>
-        <p className="text-sm mb-4" style={{ color: 'var(--text-secondary)' }}>
-          Receive anomaly alerts in Slack.{' '}
-          <a href="https://api.slack.com/messaging/webhooks" target="_blank" rel="noopener noreferrer"
-            className="underline" style={{ color: 'var(--color-primary-light)' }}>
-            Create webhook →
-          </a>
+        <h2 className="text-lg font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>Alert Settings</h2>
+        <p className="text-sm mb-6" style={{ color: 'var(--text-secondary)' }}>
+          Configure how you receive anomaly alerts. Both Slack and email are optional.
         </p>
-        <div className="flex gap-3">
+
+        {/* Slack */}
+        <div className="mb-6">
+          <h3 className="text-sm font-medium mb-3" style={{ color: 'var(--text-primary)' }}>Slack Webhook</h3>
+          <p className="text-xs mb-3" style={{ color: 'var(--text-muted)' }}>
+            <a href="https://api.slack.com/messaging/webhooks" target="_blank" rel="noopener noreferrer"
+              className="underline" style={{ color: 'var(--color-primary-light)' }}>
+              Create webhook →
+            </a>
+          </p>
           <input value={webhookUrl} onChange={e => setWebhookUrl(e.target.value)}
             placeholder="https://hooks.slack.com/services/..."
-            className="flex-1 px-4 py-2.5 rounded-lg text-sm outline-none focus:ring-2"
+            className="w-full px-4 py-2.5 rounded-lg text-sm outline-none focus:ring-2"
             style={inputStyle} />
-          <button onClick={handleSaveWebhook}
-            className="px-5 py-2 rounded-lg text-sm font-medium transition-opacity duration-150 hover:opacity-90"
-            style={{ backgroundColor: 'var(--color-primary)', color: 'var(--bg)' }}>
-            Save
-          </button>
         </div>
+
+        {/* SMTP */}
+        <div className="pt-6 border-t" style={{ borderColor: 'var(--border)' }}>
+          <h3 className="text-sm font-medium mb-3" style={{ color: 'var(--text-primary)' }}>Email (SMTP)</h3>
+          <p className="text-xs mb-3" style={{ color: 'var(--text-muted)' }}>
+            Optional. Send anomaly alerts via email.
+          </p>
+          <div className="grid grid-cols-2 gap-4 mb-4">
+            <div>
+              <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>SMTP Host</label>
+              <input value={smtpHost} onChange={e => setSmtpHost(e.target.value)}
+                placeholder="smtp.gmail.com"
+                className="w-full px-4 py-2.5 rounded-lg text-sm outline-none focus:ring-2"
+                style={inputStyle} />
+            </div>
+            <div>
+              <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Port</label>
+              <input value={smtpPort} onChange={e => setSmtpPort(e.target.value)}
+                placeholder="587"
+                className="w-full px-4 py-2.5 rounded-lg text-sm outline-none focus:ring-2"
+                style={inputStyle} />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4 mb-4">
+            <div>
+              <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Username</label>
+              <input value={smtpUser} onChange={e => setSmtpUser(e.target.value)}
+                placeholder="you@gmail.com"
+                className="w-full px-4 py-2.5 rounded-lg text-sm outline-none focus:ring-2"
+                style={inputStyle} />
+            </div>
+            <div>
+              <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Password</label>
+              <input value={smtpPass} onChange={e => setSmtpPass(e.target.value)} type="password"
+                placeholder="App password"
+                className="w-full px-4 py-2.5 rounded-lg text-sm outline-none focus:ring-2"
+                style={inputStyle} />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4 mb-4">
+            <div>
+              <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>From Email</label>
+              <input value={smtpFrom} onChange={e => setSmtpFrom(e.target.value)}
+                placeholder="alerts@costwatch.app"
+                className="w-full px-4 py-2.5 rounded-lg text-sm outline-none focus:ring-2"
+                style={inputStyle} />
+            </div>
+            <div>
+              <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Alert Recipient</label>
+              <input value={alertEmail} onChange={e => setAlertEmail(e.target.value)}
+                placeholder="team@company.com"
+                className="w-full px-4 py-2.5 rounded-lg text-sm outline-none focus:ring-2"
+                style={inputStyle} />
+            </div>
+          </div>
+        </div>
+
+        <button onClick={handleSaveWebhook}
+          className="mt-4 px-5 py-2 rounded-lg text-sm font-medium transition-opacity duration-150 hover:opacity-90"
+          style={{ backgroundColor: 'var(--color-primary)', color: 'var(--bg)' }}>
+          Save Settings
+        </button>
       </div>
     </div>
   );

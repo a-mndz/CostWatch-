@@ -30,6 +30,12 @@ export const AnomalyStatusSchema = z.object({
 
 export const SettingsSchema = z.object({
   webhookUrl: z.string().url().optional().or(z.literal('')),
+  smtpHost: z.string().optional().or(z.literal('')),
+  smtpPort: z.number().int().optional(),
+  smtpUser: z.string().optional().or(z.literal('')),
+  smtpPass: z.string().optional().or(z.literal('')),
+  smtpFrom: z.string().email().optional().or(z.literal('')),
+  alertEmail: z.string().email().optional().or(z.literal('')),
 });
 
 export const SyncSchema = z.object({
