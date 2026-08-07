@@ -14,7 +14,7 @@ function getBigQuery(account: GCPAccount): BigQuery {
   return new BigQuery(options);
 }
 
-export async function syncGCPCosts(account: GCPAccount) {
+export async function syncGCPCosts(userId: number, account: GCPAccount) {
   const bigquery = getBigQuery(account);
 
   const [rows] = await bigquery.query({
@@ -37,7 +37,7 @@ export async function syncGCPCosts(account: GCPAccount) {
     usage_quantity: Number(row.usage_quantity) || 0,
   }));
 
-  if (costRows.length > 0) insertCosts(costRows);
+  if (costRows.length > 0) insertCosts(userId, costRows);
   return costRows.length;
 }
 

@@ -117,11 +117,26 @@ export function setConfig(userId: number, key: string, value: string) {
   return db.prepare("INSERT OR REPLACE INTO config (user_id, key, value, updated_at) VALUES (?, ?, ?, datetime('now'))").run(userId, key, value);
 }
 
+export interface CloudAccount {
+  id: number;
+  user_id: number;
+  provider: 'aws' | 'gcp';
+  label: string;
+  account_id: string;
+  role_arn: string | null;
+  external_id: string | null;
+  project_id: string | null;
+  service_account_key: string | null;
+  status: 'connected' | 'error' | 'disconnected';
+  last_sync: string | null;
+  created_at: string;
+}
+
 // Cloud accounts — scoped by userId
-export function getCloudAccounts(userId: number) {
+export function getCloudAccounts(userId: number): CloudAccount[] {
   if (isPG) throw new Error('Use pgGetCloudAccounts from db-pg.ts');
   const db = getSqlite();
-  return db.prepare('SELECT * FROM cloud_accounts WHERE user_id = ? ORDER BY created_at DESC').all(userId);
+  return db.prepare('SELECT * FROM cloud_accounts WHERE user_id = ? ORDER BY created_at DESC').all(userId) as CloudAccount[];
 }
 
 export function addCloudAccount(userId: number, a: { provider: string; label: string; account_id: string; role_arn?: string; external_id?: string; project_id?: string; service_account_key?: string }) {

@@ -21,10 +21,10 @@ async function syncAll() {
         try {
           if (account.provider === 'aws') {
             const { syncAWSCosts } = await import('./cloud/aws');
-            await syncAWSCosts({ account_id: account.account_id, role_arn: account.role_arn!, external_id: account.external_id });
+            await syncAWSCosts(user.id, { account_id: account.account_id, role_arn: account.role_arn!, external_id: account.external_id });
           } else if (account.provider === 'gcp') {
             const { syncGCPCosts } = await import('./cloud/gcp');
-            await syncGCPCosts({ project_id: account.project_id!, service_account_key: account.service_account_key });
+            await syncGCPCosts(user.id, { project_id: account.project_id!, service_account_key: account.service_account_key });
           }
           updateCloudAccountSync(user.id, account.id);
         } catch (err) {

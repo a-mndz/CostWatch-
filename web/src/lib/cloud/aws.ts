@@ -25,7 +25,7 @@ async function getCredentials(account: AWSAccount) {
   };
 }
 
-export async function syncAWSCosts(account: AWSAccount) {
+export async function syncAWSCosts(userId: number, account: AWSAccount) {
   const creds = await getCredentials(account);
   const client = new CostExplorerClient({ region: 'us-east-1', credentials: creds });
 
@@ -60,7 +60,7 @@ export async function syncAWSCosts(account: AWSAccount) {
     }
   }
 
-  if (rows.length > 0) insertCosts(rows);
+  if (rows.length > 0) insertCosts(userId, rows);
   return rows.length;
 }
 

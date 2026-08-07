@@ -18,10 +18,10 @@ export async function POST(request: NextRequest) {
     let rowsSynced = 0;
     if (account.provider === 'aws') {
       const { syncAWSCosts } = await import('@/lib/cloud/aws');
-      rowsSynced = await syncAWSCosts({ account_id: account.account_id, role_arn: account.role_arn!, external_id: account.external_id });
+      rowsSynced = await syncAWSCosts(userId, { account_id: account.account_id, role_arn: account.role_arn!, external_id: account.external_id });
     } else {
       const { syncGCPCosts } = await import('@/lib/cloud/gcp');
-      rowsSynced = await syncGCPCosts({ project_id: account.project_id!, service_account_key: account.service_account_key });
+      rowsSynced = await syncGCPCosts(userId, { project_id: account.project_id!, service_account_key: account.service_account_key });
     }
 
     updateCloudAccountSync(userId, account.id);
