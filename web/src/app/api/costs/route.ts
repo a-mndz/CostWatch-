@@ -69,6 +69,7 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
     const result = insertAnomaly(userId, {
       date: a.date, service: a.dimension, region: 'unknown',
       expected: a.expected, actual: a.actual, z_score: a.zScore, severity: a.severity,
+      root_cause: undefined,
     });
 
     // Slack alert
