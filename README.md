@@ -1,25 +1,5 @@
-# CostWatch — Cloud Cost Anomaly Detection
-
+# CostWatch — 
 Production-grade FinOps tool for AWS & GCP. Catches cost spikes in near-real-time using z-score statistical detection, explains root causes, and alerts via Slack + Email. Built for engineering leads and FinOps teams at 10–500 employee SaaS companies.
-
-## Current Status: **Production Ready**
-
-| Metric | Status |
-|--------|--------|
-| Core MVP | ✅ Complete |
-| Auth & Multi-tenant | ✅ JWT (15min access + 7d refresh), CSRF, password reset |
-| AWS Integration | ✅ Cost Explorer via STS AssumeRole |
-| GCP Integration | ✅ BigQuery billing export |
-| Custom Cloud | ✅ Generic HTTP endpoint + API key |
-| Alerting | ✅ Slack webhooks + SMTP email |
-| Background Sync | ✅ node-cron (every 6h) + manual trigger |
-| Database | ✅ SQLite (dev) + Postgres (prod), migrations |
-| Observability | ✅ Sentry, structured logging, health checks, graceful shutdown |
-| Testing | ✅ 33 Jest tests + Playwright E2E |
-| CI/CD | ✅ GitHub Actions (lint, test, build, deploy) |
-| Docker | ✅ Standalone image with health checks |
-
----
 
 ## What's Built
 
@@ -153,7 +133,6 @@ Skeleton loaders, Empty states, Error boundaries, Reveal animations (250ms), Pre
 ```bash
 cd web
 npm install
-cp .env.example .env   # add JWT_SECRET
 npm run dev
 ```
 Open `http://localhost:3000` → Register → Settings → Upload `sample-data.csv` or connect AWS/GCP.
