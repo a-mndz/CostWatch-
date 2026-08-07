@@ -73,7 +73,15 @@ function SettingsContent() {
       setMessage(null);
       const text = await file.text();
       try {
-        const res = await fetch('/api/costs', { method: 'POST', body: text });
+        const csrfToken = document.cookie.match(/csrf_token=([^;]+)/)?.[1];
+        const res = await fetch('/api/costs', {
+          method: 'POST',
+          body: text,
+          headers: {
+            'Content-Type': 'text/plain',
+            ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
+          },
+        });
         const data = await res.json();
         if (res.ok) {
           setMessage({ type: 'success', text: `Processed ${data.recordsProcessed} records. ${data.anomalies} anomalies detected.` });
