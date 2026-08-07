@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyRefreshToken, createAccessToken } from '@/lib/auth';
+import { verifyRefreshToken, createAccessToken, createRefreshToken } from '@/lib/auth';
 import { getDb } from '@/lib/db';
 import { rateLimit } from '@/lib/rate-limit';
 import { logger } from '@/lib/logger';
@@ -28,10 +28,12 @@ export async function POST(request: NextRequest) {
     }
 
     const newAccessToken = await createAccessToken({ id: user.id, email: user.email, name: user.name });
+    const newRefreshToken = await createRefreshToken({ id: user.id, email: user.email, name: user.name });
 
-    logger.info('Token refreshed', { userId: user.id });
+    logger.info('Token refreshed (rotation)', { userId: user.id });
     const res = NextResponse.json({ success: true });
     res.cookies.set('token', newAccessToken, { httpOnly: true, sameSite: 'lax', path: '/', maxAge: 60 * 15 });
+    res.cookies.set('refresh_token', newRefreshToken, { httpOnly: true, sameSite: 'lax', path: '/', maxAge: 60 * 60 * 24 * 7 });
     return res;
   } catch (err) {
     logger.error('Token refresh failed', { error: String(err) });
