@@ -129,7 +129,6 @@ graph TD
 ```bash
 cd web
 npm install
-cp .env.example .env   # add JWT_SECRET (32+ chars)
 npm run dev
 ```
 
