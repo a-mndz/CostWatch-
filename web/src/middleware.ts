@@ -2,10 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { jwtVerify } from 'jose';
 import { getEnv } from '@/lib/env';
 
-// Call getEnv() at middleware startup to fail fast
-getEnv();
-
-const SECRET = new TextEncoder().encode(process.env.JWT_SECRET || 'costwatch-dev-secret-change-in-production');
+const { JWT_SECRET } = getEnv();
+const SECRET = new TextEncoder().encode(JWT_SECRET);
 const PUBLIC_PATHS = ['/', '/login', '/api/auth/login', '/api/auth/register', '/api/auth/me', '/api/auth/logout'];
 
 export async function middleware(request: NextRequest) {
