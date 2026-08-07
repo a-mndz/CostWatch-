@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { logger } from './logger';
+import { initSentry, captureException } from './sentry';
 import { randomBytes } from 'crypto';
+
+initSentry();
 
 export type ApiHandler = (request: NextRequest) => Promise<NextResponse>;
 
@@ -20,6 +23,7 @@ export function withErrorHandling(handler: ApiHandler): ApiHandler {
         );
       }
 
+      captureException(e, { requestId, path: request.nextUrl.pathname, method: request.method });
       logger.error('API error', {
         requestId,
         path: request.nextUrl.pathname,

@@ -4,6 +4,7 @@ const envSchema = z.object({
   JWT_SECRET: z.string().min(32, 'JWT_SECRET must be at least 32 characters'),
   DATABASE_URL: z.string().optional(),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+  SENTRY_DSN: z.string().url().optional(),
 });
 
 let cachedEnv: z.infer<typeof envSchema> | null = null;
