@@ -17,7 +17,7 @@
     "@aws-sdk/client-cost-explorer": "^3.1105.0",
     "@aws-sdk/client-sts": "^3.1105.0",
     "@google-cloud/bigquery": "^9.0.1",
-    "@sentry/nextjs": "^10.69.0",
+    "@sentry/nextjs": "^11.0.0",
     "@types/nodemailer": "^8.0.1",
     "bcryptjs": "^3.0.3",
     "better-sqlite3": "^13.0.3",
